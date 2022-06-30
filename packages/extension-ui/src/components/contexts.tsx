@@ -1,7 +1,7 @@
 // Copyright 2019-2022 @polkadot/extension-ui authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { AccountsContext, AuthorizeRequest, MetadataRequest, SigningRequest } from '@polkadot/extension-base/background/types';
+import type { AccountsContext, AuthorizeRequest, DecryptRequest, EncryptRequest, MetadataRequest, SigningRequest } from '@polkadot/extension-base/background/types';
 import type { SettingsStruct } from '@polkadot/ui-settings/types';
 import type { AvailableThemes } from './themes';
 
@@ -15,6 +15,8 @@ const noop = (): void => undefined;
 const AccountContext = React.createContext<AccountsContext>({ accounts: [], hierarchy: [], master: undefined });
 const ActionContext = React.createContext<(to?: string) => void>(noop);
 const AuthorizeReqContext = React.createContext<AuthorizeRequest[]>([]);
+const DecryptReqContext = React.createContext<DecryptRequest[]>([]);
+const EncryptReqContext = React.createContext<EncryptRequest[]>([]);
 const MediaContext = React.createContext<boolean>(false);
 const MetadataReqContext = React.createContext<MetadataRequest[]>([]);
 const SettingsContext = React.createContext<SettingsStruct>(settings.get());
@@ -26,6 +28,8 @@ export {
   AccountContext,
   ActionContext,
   AuthorizeReqContext,
+  DecryptReqContext,
+  EncryptReqContext,
   MediaContext,
   MetadataReqContext,
   SettingsContext,
