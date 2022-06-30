@@ -6,7 +6,7 @@ import type { KeyringPair, KeyringPair$Json, KeyringPair$Meta } from '@polkadot/
 import type { SignerPayloadJSON, SignerPayloadRaw } from '@polkadot/types/types';
 import type { SubjectInfo } from '@polkadot/ui-keyring/observable/types';
 import type { KeypairType } from '@polkadot/util-crypto/types';
-import type { AccountJson, AllowedPath, AuthorizeRequest, MessageTypes, MetadataRequest, RequestAccountBatchExport, RequestAccountChangePassword, RequestAccountCreateExternal, RequestAccountCreateHardware, RequestAccountCreateSuri, RequestAccountEdit, RequestAccountExport, RequestAccountForget, RequestAccountShow, RequestAccountTie, RequestAccountValidate, RequestAuthorizeApprove, RequestAuthorizeReject, RequestBatchRestore, RequestDeriveCreate, RequestDeriveValidate, RequestJsonRestore, RequestMetadataApprove, RequestMetadataReject, RequestSeedCreate, RequestSeedValidate, RequestSigningApprovePassword, RequestSigningApproveSignature, RequestSigningCancel, RequestSigningIsLocked, RequestTypes, ResponseAccountExport, ResponseAccountsExport, ResponseAuthorizeList, ResponseDeriveValidate, ResponseJsonGetAccountInfo, ResponseSeedCreate, ResponseSeedValidate, ResponseSigningIsLocked, ResponseType, SigningRequest } from '../types';
+import type { AccountJson, AllowedPath, AuthorizeRequest, DecryptRequest, EncryptRequest, MessageTypes, MetadataRequest, RequestAccountBatchExport, RequestAccountChangePassword, RequestAccountCreateExternal, RequestAccountCreateHardware, RequestAccountCreateSuri, RequestAccountEdit, RequestAccountExport, RequestAccountForget, RequestAccountShow, RequestAccountTie, RequestAccountValidate, RequestAuthorizeApprove, RequestAuthorizeReject, RequestBatchRestore, RequestDeriveCreate, RequestDeriveValidate, RequestJsonRestore, RequestMetadataApprove, RequestMetadataReject, RequestSeedCreate, RequestSeedValidate, RequestSigningApprovePassword, RequestSigningApproveSignature, RequestSigningCancel, RequestSigningIsLocked, RequestTypes, ResponseAccountExport, ResponseAccountsExport, ResponseAuthorizeList, ResponseDeriveValidate, ResponseJsonGetAccountInfo, ResponseSeedCreate, ResponseSeedValidate, ResponseSigningIsLocked, ResponseType, SigningRequest } from '../types';
 
 import { ALLOWED_PATH, PASSWORD_EXPIRY_MS } from '@polkadot/extension-base/defaults';
 import { TypeRegistry } from '@polkadot/types';
@@ -433,6 +433,34 @@ export default class Extension {
     };
   }
 
+  private decryptSubscribe (id: string, port: chrome.runtime.Port): boolean {
+    const cb = createSubscription<'pri(decrypt.requests)'>(id, port);
+    const subscription = this.#state.decryptSubject.subscribe((requests: DecryptRequest[]): void =>
+      cb(requests)
+    );
+
+    port.onDisconnect.addListener((): void => {
+      unsubscribe(id);
+      subscription.unsubscribe();
+    });
+
+    return true;
+  }
+
+  private encryptSubscribe (id: string, port: chrome.runtime.Port): boolean {
+    const cb = createSubscription<'pri(encrypt.requests)'>(id, port);
+    const subscription = this.#state.encryptSubject.subscribe((requests: EncryptRequest[]): void =>
+      cb(requests)
+    );
+
+    port.onDisconnect.addListener((): void => {
+      unsubscribe(id);
+      subscription.unsubscribe();
+    });
+
+    return true;
+  }
+
   // FIXME This looks very much like what we have in authorization
   private signingSubscribe (id: string, port: chrome.runtime.Port): boolean {
     const cb = createSubscription<'pri(signing.requests)'>(id, port);
@@ -565,6 +593,12 @@ export default class Extension {
 
       case 'pri(accounts.validate)':
         return this.accountsValidate(request as RequestAccountValidate);
+
+      case 'pri(decrypt.requests)':
+        return this.decryptSubscribe(id, port);
+
+      case 'pri(encrypt.requests)':
+        return this.encryptSubscribe(id, port);
 
       case 'pri(metadata.approve)':
         return this.metadataApprove(request as RequestMetadataApprove);

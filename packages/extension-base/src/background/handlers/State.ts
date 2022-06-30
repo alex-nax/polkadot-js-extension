@@ -3,7 +3,9 @@
 
 import type { MetadataDef, ProviderMeta } from '@polkadot/extension-inject/types';
 import type { JsonRpcResponse, ProviderInterface, ProviderInterfaceCallback } from '@polkadot/rpc-provider/types';
-import type { AccountJson, AuthorizeRequest, MetadataRequest, RequestAuthorizeTab, RequestRpcSend, RequestRpcSubscribe, RequestRpcUnsubscribe, RequestSign, ResponseRpcListProviders, ResponseSigning, SigningRequest } from '../types';
+import type RequestBytesDecrypt from "../RequestBytesDecrypt"
+import type RequestBytesEncrypt from "../RequestBytesEncrypt"
+import type { AccountJson, AuthorizeRequest, MetadataRequest, RequestAuthorizeTab, RequestRpcSend, RequestRpcSubscribe, RequestRpcUnsubscribe, RequestSign, ResponseDecrypt, ResponseEncrypt, ResponseRpcListProviders, ResponseSigning, SigningRequest } from '../types';
 
 import { BehaviorSubject } from 'rxjs';
 
@@ -52,6 +54,20 @@ type Providers = Record<string, {
   // provider.
   start: () => ProviderInterface;
 }>
+
+interface DecryptRequest extends Resolver<ResponseDecrypt> {
+  account: AccountJson;
+  id: string;
+  request: RequestBytesDecrypt;
+  url: string;
+}
+
+interface EncryptRequest extends Resolver<ResponseEncrypt> {
+  account: AccountJson;
+  id: string;
+  request: RequestBytesEncrypt;
+  url: string;
+}
 
 interface SignRequest extends Resolver<ResponseSigning> {
   account: AccountJson;
@@ -139,6 +155,10 @@ export default class State {
   // Map of all providers exposed by the extension, they are retrievable by key
   readonly #providers: Providers;
 
+  readonly #decryptRequests: Record<string, DecryptRequest> = {};
+
+  readonly #encryptRequests: Record<string, EncryptRequest> = {};
+
   readonly #signRequests: Record<string, SignRequest> = {};
 
   #windows: number[] = [];
@@ -146,6 +166,10 @@ export default class State {
   public readonly authSubject: BehaviorSubject<AuthorizeRequest[]> = new BehaviorSubject<AuthorizeRequest[]>([]);
 
   public readonly metaSubject: BehaviorSubject<MetadataRequest[]> = new BehaviorSubject<MetadataRequest[]>([]);
+
+  public readonly decryptSubject: BehaviorSubject<Omit<DecryptRequest, "resolve" | "reject">[]> = new BehaviorSubject<Omit<DecryptRequest, "resolve" | "reject">[]>([]);
+
+  public readonly encryptSubject: BehaviorSubject<Omit<EncryptRequest, "resolve" | "reject">[]> = new BehaviorSubject<Omit<EncryptRequest, "resolve" | "reject">[]>([]);
 
   public readonly signSubject: BehaviorSubject<SigningRequest[]> = new BehaviorSubject<SigningRequest[]>([]);
 
@@ -173,6 +197,14 @@ export default class State {
     return Object.keys(this.#metaRequests).length;
   }
 
+  public get numDecryptRequests (): number {
+    return Object.keys(this.#decryptRequests).length;
+  }
+
+  public get numEncryptRequests (): number {
+    return Object.keys(this.#encryptRequests).length;
+  }
+
   public get numSignRequests (): number {
     return Object.keys(this.#signRequests).length;
   }
@@ -187,6 +219,18 @@ export default class State {
     return Object
       .values(this.#metaRequests)
       .map(({ id, request, url }): MetadataRequest => ({ id, request, url }));
+  }
+
+  public get allDecryptRequests (): Omit<DecryptRequest, "resolve" | "reject">[] {
+    return Object
+      .values(this.#decryptRequests)
+      .map(({ account, id, request, url }): Omit<DecryptRequest, "resolve" | "reject"> => ({ account, id, request, url }));
+  }
+
+  public get allEncryptRequests (): Omit<EncryptRequest, "resolve" | "reject">[] {
+    return Object
+      .values(this.#encryptRequests)
+      .map(({ account, id, request, url }): Omit<EncryptRequest, "resolve" | "reject"> => ({ account, id, request, url }));
   }
 
   public get allSignRequests (): SigningRequest[] {
@@ -271,6 +315,42 @@ export default class State {
     };
   };
 
+  private decryptComplete = (id: string, resolve: (result: ResponseDecrypt) => void, reject: (error: Error) => void): Resolver<ResponseDecrypt> => {
+    const complete = (): void => {
+      delete this.#decryptRequests[id];
+      this.updateIconDecrypt(true);
+    }
+
+    return {
+      reject: (error) => {
+        complete();
+        reject(error)
+      },
+      resolve: (result) => {
+        complete();
+        resolve(result)
+      }
+    }
+  }
+
+  private encryptComplete = (id: string, resolve: (result: ResponseEncrypt) => void, reject: (error: Error) => void): Resolver<ResponseEncrypt> => {
+    const complete = (): void => {
+      delete this.#encryptRequests[id];
+      this.updateIconEncrypt(true);
+    }
+
+    return {
+      reject: (error) => {
+        complete();
+        reject(error)
+      },
+      resolve: (result) => {
+        complete();
+        resolve(result)
+      }
+    }
+  }
+
   private signComplete = (id: string, resolve: (result: ResponseSigning) => void, reject: (error: Error) => void): Resolver<ResponseSigning> => {
     const complete = (): void => {
       delete this.#signRequests[id];
@@ -301,12 +381,16 @@ export default class State {
     const authCount = this.numAuthRequests;
     const metaCount = this.numMetaRequests;
     const signCount = this.numSignRequests;
+    const decryptCount = this.numDecryptRequests;
+    const encryptCount = this.numEncryptRequests;
+    const totalCount = signCount + encryptCount + decryptCount;
+
     const text = (
       authCount
         ? 'Auth'
         : metaCount
           ? 'Meta'
-          : (signCount ? `${signCount}` : '')
+          : (totalCount ? `${totalCount}` : '')
     );
 
     withErrorLog(() => chrome.browserAction.setBadgeText({ text }));
@@ -345,6 +429,16 @@ export default class State {
 
   private updateIconMeta (shouldClose?: boolean): void {
     this.metaSubject.next(this.allMetaRequests);
+    this.updateIcon(shouldClose);
+  }
+
+  private updateIconDecrypt (shouldClose?: boolean) {
+    this.decryptSubject.next(this.allDecryptRequests);
+    this.updateIcon(shouldClose);
+  }
+
+  private updateIconEncrypt (shouldClose?: boolean) {
+    this.decryptSubject.next(this.allDecryptRequests);
     this.updateIcon(shouldClose);
   }
 
@@ -416,6 +510,14 @@ export default class State {
 
   public getMetaRequest (id: string): MetaRequest {
     return this.#metaRequests[id];
+  }
+
+  public getDecryptRequest (id: string): DecryptRequest {
+    return this.#decryptRequests[id];
+  }
+
+  public getEncryptRequest (id: string): EncryptRequest {
+    return this.#encryptRequests[id];
   }
 
   public getSignRequest (id: string): SignRequest {
@@ -500,6 +602,40 @@ export default class State {
     this.#notification = notification;
 
     return true;
+  }
+
+  public decrypt (url: string, request: RequestBytesDecrypt, account: AccountJson) {
+    const id = getId();
+
+    return new Promise<ResponseDecrypt>((resolve, reject) => {
+      this.#decryptRequests[id] = {
+        ...this.decryptComplete(id, resolve, reject),
+        account,
+        id,
+        request,
+        url
+      }
+
+      this.updateIconDecrypt();
+      this.popupOpen();
+    });
+  }
+
+  public encrypt (url: string, request: RequestBytesEncrypt, account: AccountJson) {
+    const id = getId();
+
+    return new Promise<ResponseEncrypt>((resolve, reject) => {
+      this.#encryptRequests[id] = {
+        ...this.encryptComplete(id, resolve, reject),
+        account,
+        id,
+        request,
+        url
+      }
+
+      this.updateIconEncrypt();
+      this.popupOpen();
+    });
   }
 
   public sign (url: string, request: RequestSign, account: AccountJson): Promise<ResponseSigning> {

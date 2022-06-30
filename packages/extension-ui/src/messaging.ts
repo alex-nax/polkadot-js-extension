@@ -1,7 +1,7 @@
 // Copyright 2019-2022 @polkadot/extension-ui authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { AccountJson, AllowedPath, AuthorizeRequest, MessageTypes, MessageTypesWithNoSubscriptions, MessageTypesWithNullRequest, MessageTypesWithSubscriptions, MetadataRequest, RequestTypes, ResponseAuthorizeList, ResponseDeriveValidate, ResponseJsonGetAccountInfo, ResponseSigningIsLocked, ResponseTypes, SeedLengths, SigningRequest, SubscriptionMessageTypes } from '@polkadot/extension-base/background/types';
+import type { AccountJson, AllowedPath, AuthorizeRequest, DecryptRequest, EncryptRequest, MessageTypes, MessageTypesWithNoSubscriptions, MessageTypesWithNullRequest, MessageTypesWithSubscriptions, MetadataRequest, RequestTypes, ResponseAuthorizeList, ResponseDeriveValidate, ResponseJsonGetAccountInfo, ResponseSigningIsLocked, ResponseTypes, SeedLengths, SigningRequest, SubscriptionMessageTypes } from '@polkadot/extension-base/background/types';
 import type { Message } from '@polkadot/extension-base/types';
 import type { Chain } from '@polkadot/extension-chains/types';
 import type { KeyringPair$Json } from '@polkadot/keyring/types';
@@ -202,6 +202,14 @@ export async function removeAuthorization (url: string): Promise<ResponseAuthori
 
 export async function subscribeMetadataRequests (cb: (accounts: MetadataRequest[]) => void): Promise<boolean> {
   return sendMessage('pri(metadata.requests)', null, cb);
+}
+
+export async function subscribeDecryptRequests (cb: (decryptions: DecryptRequest[]) => void): Promise<boolean> {
+  return sendMessage("pri(decrypt.requests)", null, cb);
+}
+
+export async function subscribeEncryptRequests (cb: (encryptions: EncryptRequest[]) => void): Promise<boolean> {
+  return sendMessage("pri(encrypt.requests)", null, cb);
 }
 
 export async function subscribeSigningRequests (cb: (accounts: SigningRequest[]) => void): Promise<boolean> {

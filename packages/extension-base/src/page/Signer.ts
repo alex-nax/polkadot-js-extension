@@ -9,9 +9,59 @@ import type { SendRequest } from './types';
 let sendRequest: SendRequest;
 let nextId = 0;
 
+export interface DecryptPayload {
+  /**
+   * @description The ss-58 encoded address of recipient
+   */
+  address: string;
+  /**
+   * @description The hex-encoded data for this request
+   */
+  data: string;
+  /**
+   * @description The ss-58 encoded address of sender
+   */
+  sender: string;
+}
+
+export interface EncryptPayload {
+  /**
+   * @description The ss-58 encoded address of sender
+   */
+  address: string;
+  /**
+   * @description The hex-encoded data for this request
+   */
+  data: string;
+  /**
+   * @description The ss-58 encoded address of recipient
+   */
+  recipient: string;
+}
+
 export default class Signer implements SignerInterface {
   constructor (_sendRequest: SendRequest) {
     sendRequest = _sendRequest;
+  }
+
+  public async decryptBytes (payload: DecryptPayload) {
+    const id = ++nextId;
+    const result = await sendRequest('pub(bytes.decrypt)', payload);
+
+    return {
+      ...result,
+      id
+    };
+  }
+
+  public async encodeBytes (payload: EncryptPayload) {
+    const id = ++nextId;
+    const result = await sendRequest('pub(bytes.encrypt)', payload);
+
+    return {
+      ...result,
+      id
+    };
   }
 
   public async signPayload (payload: SignerPayloadJSON): Promise<SignerResult> {

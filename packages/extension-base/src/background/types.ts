@@ -10,11 +10,14 @@ import type { SignerPayloadJSON, SignerPayloadRaw } from '@polkadot/types/types'
 import type { KeyringPairs$Json } from '@polkadot/ui-keyring/types';
 import type { HexString } from '@polkadot/util/types';
 import type { KeypairType } from '@polkadot/util-crypto/types';
+import type RequestBytesDecrypt from './RequestBytesDecrypt';
+import type RequestBytesEncrypt from './RequestBytesEncrypt';
 
 import { TypeRegistry } from '@polkadot/types';
 
 import { ALLOWED_PATH } from '../defaults';
 import { AuthUrls } from './handlers/State';
+import { DecryptPayload, EncryptPayload } from '../page/Signer';
 
 type KeysWithDefinedValues<T> = {
   [K in keyof T]: T[K] extends undefined ? never : K
@@ -65,6 +68,20 @@ export interface MetadataRequest {
   url: string;
 }
 
+export interface DecryptRequest {
+  account: AccountJson;
+  id: string;
+  request: RequestBytesDecrypt;
+  url: string;
+}
+
+export interface EncryptRequest {
+  account: AccountJson;
+  id: string;
+  request: RequestBytesEncrypt;
+  url: string;
+}
+
 export interface SigningRequest {
   account: AccountJson;
   id: string;
@@ -93,8 +110,10 @@ export interface RequestSignatures {
   'pri(authorize.requests)': [RequestAuthorizeSubscribe, boolean, AuthorizeRequest[]];
   'pri(authorize.toggle)': [string, ResponseAuthorizeList];
   'pri(authorize.remove)': [string, ResponseAuthorizeList];
+  'pri(decrypt.requests)': [RequestDecrypt, boolean, DecryptRequest[]];
   'pri(derivation.create)': [RequestDeriveCreate, boolean];
   'pri(derivation.validate)': [RequestDeriveValidate, ResponseDeriveValidate];
+  'pri(encrypt.requests)': [RequestEncrypt, boolean, EncryptRequest[]];
   'pri(json.restore)': [RequestJsonRestore, void];
   'pri(json.batchRestore)': [RequestBatchRestore, void];
   'pri(json.account.info)': [KeyringPair$Json, ResponseJsonGetAccountInfo];
@@ -116,6 +135,8 @@ export interface RequestSignatures {
   'pub(accounts.list)': [RequestAccountList, InjectedAccount[]];
   'pub(accounts.subscribe)': [RequestAccountSubscribe, boolean, InjectedAccount[]];
   'pub(authorize.tab)': [RequestAuthorizeTab, null];
+  'pub(bytes.decrypt)': [DecryptPayload, ResponseDecrypt],
+  'pub(bytes.encrypt)': [EncryptPayload, ResponseEncrypt],
   'pub(bytes.sign)': [SignerPayloadRaw, ResponseSigning];
   'pub(extrinsic.sign)': [SignerPayloadJSON, ResponseSigning];
   'pub(metadata.list)': [null, InjectedMetadataKnown[]];
@@ -270,6 +291,9 @@ export interface RequestRpcUnsubscribe {
   type: string;
 }
 
+export type RequestDecrypt = null;
+export type RequestEncrypt = null;
+
 export interface RequestSigningApprovePassword {
   id: string;
   password?: string;
@@ -338,6 +362,16 @@ export type TransportResponseMessage<TMessageType extends MessageTypes> =
 export interface ResponseSigning {
   id: string;
   signature: HexString;
+}
+
+export interface ResponseDecrypt {
+  id: string;
+  message: string;
+}
+
+export interface ResponseEncrypt {
+  id: string;
+  encrypted: string;
 }
 
 export interface ResponseDeriveValidate {

@@ -1,7 +1,7 @@
 // Copyright 2019-2022 @polkadot/extension-ui authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { AccountJson, AccountsContext, AuthorizeRequest, MetadataRequest, SigningRequest } from '@polkadot/extension-base/background/types';
+import type { AccountJson, AccountsContext, AuthorizeRequest, DecryptRequest, EncryptRequest, MetadataRequest, SigningRequest } from '@polkadot/extension-base/background/types';
 import type { SettingsStruct } from '@polkadot/ui-settings/types';
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -14,7 +14,7 @@ import uiSettings from '@polkadot/ui-settings';
 import { ErrorBoundary, Loading } from '../components';
 import { AccountContext, ActionContext, AuthorizeReqContext, MediaContext, MetadataReqContext, SettingsContext, SigningReqContext } from '../components/contexts';
 import ToastProvider from '../components/Toast/ToastProvider';
-import { subscribeAccounts, subscribeAuthorizeRequests, subscribeMetadataRequests, subscribeSigningRequests } from '../messaging';
+import { subscribeAccounts, subscribeAuthorizeRequests, subscribeDecryptRequests, subscribeEncryptRequests, subscribeMetadataRequests, subscribeSigningRequests } from '../messaging';
 import { buildHierarchy } from '../util/buildHierarchy';
 import Accounts from './Accounts';
 import AuthList from './AuthManagement';
@@ -63,12 +63,17 @@ function initAccountContext (accounts: AccountJson[]): AccountsContext {
   };
 }
 
+const Decrypt = () => null;
+const Encrypt = () => null;
+
 export default function Popup (): React.ReactElement {
   const [accounts, setAccounts] = useState<null | AccountJson[]>(null);
   const [accountCtx, setAccountCtx] = useState<AccountsContext>({ accounts: [], hierarchy: [] });
   const [authRequests, setAuthRequests] = useState<null | AuthorizeRequest[]>(null);
   const [cameraOn, setCameraOn] = useState(startSettings.camera === 'on');
   const [mediaAllowed, setMediaAllowed] = useState(false);
+  const [decryptRequests, setDecryptRequests] = useState<null | DecryptRequest[]>(null)
+  const [encryptRequests, setEncryptRequests] = useState<null | EncryptRequest[]>(null)
   const [metaRequests, setMetaRequests] = useState<null | MetadataRequest[]>(null);
   const [signRequests, setSignRequests] = useState<null | SigningRequest[]>(null);
   const [isWelcomeDone, setWelcomeDone] = useState(false);
@@ -89,6 +94,8 @@ export default function Popup (): React.ReactElement {
     Promise.all([
       subscribeAccounts(setAccounts),
       subscribeAuthorizeRequests(setAuthRequests),
+      subscribeDecryptRequests(setDecryptRequests),,
+      subscribeEncryptRequests(setEncryptRequests),
       subscribeMetadataRequests(setMetaRequests),
       subscribeSigningRequests(setSignRequests)
     ]).catch(console.error);
@@ -123,7 +130,11 @@ export default function Popup (): React.ReactElement {
         ? wrapWithErrorBoundary(<Metadata />, 'metadata')
         : signRequests && signRequests.length
           ? wrapWithErrorBoundary(<Signing />, 'signing')
-          : wrapWithErrorBoundary(<Accounts />, 'accounts')
+          : decryptRequests ?
+            wrapWithErrorBoundary(<Decrypt />, 'decrypt') :
+            encryptRequests ?
+              wrapWithErrorBoundary(<Encrypt />, 'encrypt') :
+              wrapWithErrorBoundary(<Accounts />, 'accounts')
     : wrapWithErrorBoundary(<Welcome />, 'welcome');
 
   return (

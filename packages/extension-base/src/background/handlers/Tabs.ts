@@ -20,6 +20,9 @@ import RequestExtrinsicSign from '../RequestExtrinsicSign';
 import { withErrorLog } from './helpers';
 import State from './State';
 import { createSubscription, unsubscribe } from './subscriptions';
+import { DecryptPayload, EncryptPayload } from '@polkadot/extension-base/page/Signer';
+import RequestBytesDecrypt from '../RequestBytesDecrypt';
+import RequestBytesEncrypt from '../RequestBytesEncrypt';
 
 function transformAccounts (accounts: SubjectInfo, anyType = false): InjectedAccount[] {
   return Object
@@ -72,6 +75,20 @@ export default class Tabs {
     assert(pair, 'Unable to find keypair');
 
     return pair;
+  }
+
+  private bytesDecrypt (url: string, request: DecryptPayload) {
+    const address = request.address;
+    const pair = this.getSigningPair(address);
+
+    return this.#state.decrypt(url, new RequestBytesDecrypt(request), { address, ...pair.meta})
+  }
+
+  private bytesEncrypt (url: string, request: EncryptPayload) {
+    const address = request.address;
+    const pair = this.getSigningPair(address);
+
+    return this.#state.encrypt(url, new RequestBytesEncrypt(request), { address, ...pair.meta})
   }
 
   private bytesSign (url: string, request: SignerPayloadRaw): Promise<ResponseSigning> {
@@ -187,6 +204,12 @@ export default class Tabs {
 
       case 'pub(accounts.subscribe)':
         return this.accountsSubscribe(url, id, port);
+
+      case 'pub(bytes.decrypt)':
+        return this.bytesDecrypt(url, request as DecryptPayload);
+
+      case 'pub(bytes.encrypt)':
+        return this.bytesEncrypt(url, request as EncryptPayload);
 
       case 'pub(bytes.sign)':
         return this.bytesSign(url, request as SignerPayloadRaw);
