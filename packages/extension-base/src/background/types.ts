@@ -16,8 +16,8 @@ import type RequestBytesEncrypt from './RequestBytesEncrypt';
 import { TypeRegistry } from '@polkadot/types';
 
 import { ALLOWED_PATH } from '../defaults';
-import { AuthUrls } from './handlers/State';
 import { DecryptPayload, EncryptPayload } from '../page/Signer';
+import { AuthUrls } from './handlers/State';
 
 type KeysWithDefinedValues<T> = {
   [K in keyof T]: T[K] extends undefined ? never : K
@@ -110,10 +110,14 @@ export interface RequestSignatures {
   'pri(authorize.requests)': [RequestAuthorizeSubscribe, boolean, AuthorizeRequest[]];
   'pri(authorize.toggle)': [string, ResponseAuthorizeList];
   'pri(authorize.remove)': [string, ResponseAuthorizeList];
+  'pri(decrypt.approve.password)': [RequestDecryptApprovePassword, boolean];
   'pri(decrypt.requests)': [RequestDecrypt, boolean, DecryptRequest[]];
+  'pri(decrypt.cancel)': [RequestDecryptCancel, boolean];
   'pri(derivation.create)': [RequestDeriveCreate, boolean];
   'pri(derivation.validate)': [RequestDeriveValidate, ResponseDeriveValidate];
+  'pri(encrypt.approve.password)': [RequestEncryptApprovePassword, boolean];
   'pri(encrypt.requests)': [RequestEncrypt, boolean, EncryptRequest[]];
+  'pri(encrypt.cancel)': [RequestEncryptCancel, boolean];
   'pri(json.restore)': [RequestJsonRestore, void];
   'pri(json.batchRestore)': [RequestBatchRestore, void];
   'pri(json.account.info)': [KeyringPair$Json, ResponseJsonGetAccountInfo];
@@ -291,8 +295,29 @@ export interface RequestRpcUnsubscribe {
   type: string;
 }
 
+export interface RequestDecryptApprovePassword {
+  id: string;
+  password?: string;
+  savePass?: boolean;
+}
+
 export type RequestDecrypt = null;
+
+export interface RequestDecryptCancel {
+  id: string;
+}
+
+export interface RequestEncryptApprovePassword {
+  id: string;
+  password?: string;
+  savePass?: boolean;
+}
+
 export type RequestEncrypt = null;
+
+export interface RequestEncryptCancel {
+  id: string;
+}
 
 export interface RequestSigningApprovePassword {
   id: string;

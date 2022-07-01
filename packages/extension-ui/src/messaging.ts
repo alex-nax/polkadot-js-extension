@@ -204,12 +204,28 @@ export async function subscribeMetadataRequests (cb: (accounts: MetadataRequest[
   return sendMessage('pri(metadata.requests)', null, cb);
 }
 
+export async function approveDecryptPassword (id: string, savePass: boolean, password?: string): Promise<boolean> {
+  return sendMessage('pri(decrypt.approve.password)', { id, password, savePass });
+}
+
 export async function subscribeDecryptRequests (cb: (decryptions: DecryptRequest[]) => void): Promise<boolean> {
-  return sendMessage("pri(decrypt.requests)", null, cb);
+  return sendMessage('pri(decrypt.requests)', null, cb);
+}
+
+export async function cancelDecryptRequest (id: string): Promise<boolean> {
+  return sendMessage('pri(decrypt.cancel)', { id });
+}
+
+export async function approveEncryptPassword (id: string, savePass: boolean, password?: string): Promise<boolean> {
+  return sendMessage('pri(encrypt.approve.password)', { id, password, savePass });
 }
 
 export async function subscribeEncryptRequests (cb: (encryptions: EncryptRequest[]) => void): Promise<boolean> {
-  return sendMessage("pri(encrypt.requests)", null, cb);
+  return sendMessage('pri(encrypt.requests)', null, cb);
+}
+
+export async function cancelEncryptRequest (id: string): Promise<boolean> {
+  return sendMessage('pri(encrypt.cancel)', { id });
 }
 
 export async function subscribeSigningRequests (cb: (accounts: SigningRequest[]) => void): Promise<boolean> {

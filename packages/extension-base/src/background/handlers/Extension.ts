@@ -6,7 +6,7 @@ import type { KeyringPair, KeyringPair$Json, KeyringPair$Meta } from '@polkadot/
 import type { SignerPayloadJSON, SignerPayloadRaw } from '@polkadot/types/types';
 import type { SubjectInfo } from '@polkadot/ui-keyring/observable/types';
 import type { KeypairType } from '@polkadot/util-crypto/types';
-import type { AccountJson, AllowedPath, AuthorizeRequest, DecryptRequest, EncryptRequest, MessageTypes, MetadataRequest, RequestAccountBatchExport, RequestAccountChangePassword, RequestAccountCreateExternal, RequestAccountCreateHardware, RequestAccountCreateSuri, RequestAccountEdit, RequestAccountExport, RequestAccountForget, RequestAccountShow, RequestAccountTie, RequestAccountValidate, RequestAuthorizeApprove, RequestAuthorizeReject, RequestBatchRestore, RequestDeriveCreate, RequestDeriveValidate, RequestJsonRestore, RequestMetadataApprove, RequestMetadataReject, RequestSeedCreate, RequestSeedValidate, RequestSigningApprovePassword, RequestSigningApproveSignature, RequestSigningCancel, RequestSigningIsLocked, RequestTypes, ResponseAccountExport, ResponseAccountsExport, ResponseAuthorizeList, ResponseDeriveValidate, ResponseJsonGetAccountInfo, ResponseSeedCreate, ResponseSeedValidate, ResponseSigningIsLocked, ResponseType, SigningRequest } from '../types';
+import type { AccountJson, AllowedPath, AuthorizeRequest, DecryptRequest, EncryptRequest, MessageTypes, MetadataRequest, RequestAccountBatchExport, RequestAccountChangePassword, RequestAccountCreateExternal, RequestAccountCreateHardware, RequestAccountCreateSuri, RequestAccountEdit, RequestAccountExport, RequestAccountForget, RequestAccountShow, RequestAccountTie, RequestAccountValidate, RequestAuthorizeApprove, RequestAuthorizeReject, RequestBatchRestore, RequestDecryptApprovePassword, RequestDecryptCancel, RequestDeriveCreate, RequestDeriveValidate, RequestEncryptApprovePassword, RequestEncryptCancel, RequestJsonRestore, RequestMetadataApprove, RequestMetadataReject, RequestSeedCreate, RequestSeedValidate, RequestSigningApprovePassword, RequestSigningApproveSignature, RequestSigningCancel, RequestSigningIsLocked, RequestTypes, ResponseAccountExport, ResponseAccountsExport, ResponseAuthorizeList, ResponseDeriveValidate, ResponseJsonGetAccountInfo, ResponseSeedCreate, ResponseSeedValidate, ResponseSigningIsLocked, ResponseType, SigningRequest } from '../types';
 
 import { ALLOWED_PATH, PASSWORD_EXPIRY_MS } from '@polkadot/extension-base/defaults';
 import { TypeRegistry } from '@polkadot/types';
@@ -433,6 +433,59 @@ export default class Extension {
     };
   }
 
+  private decryptApprovePassword ({ id, password }: RequestDecryptApprovePassword): boolean {
+    const queued = this.#state.getDecryptRequest(id);
+
+    assert(queued, 'Unable to find request');
+
+    const { reject, request, resolve } = queued;
+    const pair = keyring.getPair(queued.account.address);
+
+    // unlike queued.account.address the following
+    // address is encoded with the default prefix
+    // which what is used for password caching mapping
+
+    if (!pair) {
+      reject(new Error('Unable to find pair'));
+
+      return false;
+    }
+
+    // this.refreshAccountPasswordCache(pair);
+
+    // if the keyring pair is locked, the password is needed
+    if (pair.isLocked && !password) {
+      reject(new Error('Password needed to unlock the account'));
+    }
+
+    if (pair.isLocked) {
+      pair.decodePkcs8(password);
+    }
+
+    const result = request.decrypt(registry, pair);
+
+    pair.lock();
+
+    resolve({
+      id,
+      ...result
+    });
+
+    return true;
+  }
+
+  private decryptCancel ({ id }: RequestDecryptCancel): boolean {
+    const queued = this.#state.getDecryptRequest(id);
+
+    assert(queued, 'Unable to find request');
+
+    const { reject } = queued;
+
+    reject(new Error('Cancelled'));
+
+    return true;
+  }
+
   private decryptSubscribe (id: string, port: chrome.runtime.Port): boolean {
     const cb = createSubscription<'pri(decrypt.requests)'>(id, port);
     const subscription = this.#state.decryptSubject.subscribe((requests: DecryptRequest[]): void =>
@@ -442,6 +495,59 @@ export default class Extension {
     port.onDisconnect.addListener((): void => {
       unsubscribe(id);
       subscription.unsubscribe();
+    });
+
+    return true;
+  }
+
+  private encryptCancel ({ id }: RequestEncryptCancel): boolean {
+    const queued = this.#state.getEncryptRequest(id);
+
+    assert(queued, 'Unable to find request');
+
+    const { reject } = queued;
+
+    reject(new Error('Cancelled'));
+
+    return true;
+  }
+
+  private encryptApprovePassword ({ id, password }: RequestEncryptApprovePassword): boolean {
+    const queued = this.#state.getEncryptRequest(id);
+
+    assert(queued, 'Unable to find request');
+
+    const { reject, request, resolve } = queued;
+    const pair = keyring.getPair(queued.account.address);
+
+    // unlike queued.account.address the following
+    // address is encoded with the default prefix
+    // which what is used for password caching mapping
+
+    if (!pair) {
+      reject(new Error('Unable to find pair'));
+
+      return false;
+    }
+
+    // this.refreshAccountPasswordCache(pair);
+
+    // if the keyring pair is locked, the password is needed
+    if (pair.isLocked && !password) {
+      reject(new Error('Password needed to unlock the account'));
+    }
+
+    if (pair.isLocked) {
+      pair.decodePkcs8(password);
+    }
+
+    const result = request.encrypt(registry, pair);
+
+    pair.lock();
+
+    resolve({
+      id,
+      ...result
     });
 
     return true;
@@ -594,11 +700,23 @@ export default class Extension {
       case 'pri(accounts.validate)':
         return this.accountsValidate(request as RequestAccountValidate);
 
+      case 'pri(decrypt.approve.password)':
+        return this.decryptApprovePassword(request as RequestDecryptApprovePassword);
+
       case 'pri(decrypt.requests)':
         return this.decryptSubscribe(id, port);
 
+      case 'pri(decrypt.cancel)':
+        return this.decryptCancel(request as RequestDecryptCancel);
+
+      case 'pri(encrypt.approve.password)':
+        return this.encryptApprovePassword(request as RequestEncryptApprovePassword);
+
       case 'pri(encrypt.requests)':
         return this.encryptSubscribe(id, port);
+
+      case 'pri(encrypt.cancel)':
+        return this.encryptCancel(request as RequestDecryptCancel);
 
       case 'pri(metadata.approve)':
         return this.metadataApprove(request as RequestMetadataApprove);

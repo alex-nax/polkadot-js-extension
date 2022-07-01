@@ -20,7 +20,9 @@ import Accounts from './Accounts';
 import AuthList from './AuthManagement';
 import Authorize from './Authorize';
 import CreateAccount from './CreateAccount';
+import Decrypt from './Decrypt';
 import Derive from './Derive';
+import Encrypt from './Encrypt';
 import Export from './Export';
 import ExportAll from './ExportAll';
 import Forget from './Forget';
@@ -63,17 +65,14 @@ function initAccountContext (accounts: AccountJson[]): AccountsContext {
   };
 }
 
-const Decrypt = () => null;
-const Encrypt = () => null;
-
 export default function Popup (): React.ReactElement {
   const [accounts, setAccounts] = useState<null | AccountJson[]>(null);
   const [accountCtx, setAccountCtx] = useState<AccountsContext>({ accounts: [], hierarchy: [] });
   const [authRequests, setAuthRequests] = useState<null | AuthorizeRequest[]>(null);
   const [cameraOn, setCameraOn] = useState(startSettings.camera === 'on');
   const [mediaAllowed, setMediaAllowed] = useState(false);
-  const [decryptRequests, setDecryptRequests] = useState<null | DecryptRequest[]>(null)
-  const [encryptRequests, setEncryptRequests] = useState<null | EncryptRequest[]>(null)
+  const [decryptRequests, setDecryptRequests] = useState<null | DecryptRequest[]>(null);
+  const [encryptRequests, setEncryptRequests] = useState<null | EncryptRequest[]>(null);
   const [metaRequests, setMetaRequests] = useState<null | MetadataRequest[]>(null);
   const [signRequests, setSignRequests] = useState<null | SigningRequest[]>(null);
   const [isWelcomeDone, setWelcomeDone] = useState(false);
@@ -94,7 +93,7 @@ export default function Popup (): React.ReactElement {
     Promise.all([
       subscribeAccounts(setAccounts),
       subscribeAuthorizeRequests(setAuthRequests),
-      subscribeDecryptRequests(setDecryptRequests),,
+      subscribeDecryptRequests(setDecryptRequests),
       subscribeEncryptRequests(setEncryptRequests),
       subscribeMetadataRequests(setMetaRequests),
       subscribeSigningRequests(setSignRequests)
@@ -130,11 +129,11 @@ export default function Popup (): React.ReactElement {
         ? wrapWithErrorBoundary(<Metadata />, 'metadata')
         : signRequests && signRequests.length
           ? wrapWithErrorBoundary(<Signing />, 'signing')
-          : decryptRequests?.length ?
-            wrapWithErrorBoundary(<Decrypt />, 'decrypt') :
-            encryptRequests?.length ?
-              wrapWithErrorBoundary(<Encrypt />, 'encrypt') :
-              wrapWithErrorBoundary(<Accounts />, 'accounts')
+          : decryptRequests?.length
+            ? wrapWithErrorBoundary(<Decrypt />, 'decrypt')
+            : encryptRequests?.length
+              ? wrapWithErrorBoundary(<Encrypt />, 'encrypt')
+              : wrapWithErrorBoundary(<Accounts />, 'accounts')
     : wrapWithErrorBoundary(<Welcome />, 'welcome');
 
   return (
