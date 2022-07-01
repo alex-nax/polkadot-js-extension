@@ -54,7 +54,7 @@ export default class Signer implements SignerInterface {
     };
   }
 
-  public async encodeBytes (payload: EncryptPayload) {
+  public async encryptBytes (payload: EncryptPayload) {
     const id = ++nextId;
     const result = await sendRequest('pub(bytes.encrypt)', payload);
 
